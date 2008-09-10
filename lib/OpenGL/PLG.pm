@@ -4,7 +4,7 @@ use Carp;
 use warnings;
 use strict;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 
 # creates a new PoLyGon object
@@ -111,7 +111,7 @@ sub delete_polygon {
         croak "delete_polygon needs a loaded polygon id\n";
     }
     elsif ( $id == 0 ) {
-        croak "polygon id cannot be 0\n";
+        croak "polygon id cannot be zero\n";
     }
 
     # corrects behavior of plg files,
@@ -119,7 +119,7 @@ sub delete_polygon {
     $id-- if $id > 0;
 
     if ( not defined $self->{'polygons'}->[$id] ) {
-        return 0;
+        croak "delete_polygon needs a loaded polygon id\n";
     }
     else {
         splice @{ $self->{'polygons'} }, $id, 1;
@@ -150,6 +150,13 @@ sub set_vertex {
     }
     elsif ( $id == 0 ) {
         croak "vertex id cannot be zero\n";
+    }
+
+    if (not defined $x
+     or not defined $y
+     or not defined $z
+    ) {
+        croak "vertices must have all three coordinates (x, y, z)";
     }
 
     # corrects behavior of plg files,
@@ -211,11 +218,26 @@ sub get_vertex {
     $id-- if $id > 0;
 
     if ( not defined $self->{'vertices'}->[$id] ) {
-        return undef;
+        croak "get_vertex needs a loaded vertex id\n";
     }
     else {
         return @{ $self->{'vertices'}->[$id] };
     }
+}
+
+
+# returns an array reference containing
+# the coordinates of each vertex inside a 
+# given polygon
+sub get_vertices_from_polygon {
+    my ($self, $polygon) = @_;
+    my $vertices_ref = [];
+
+    my $i = 0;
+    foreach ( $self->get_polygon($polygon) ) {
+        push @{$vertices_ref->[$i++]}, $self->get_vertex($_);
+    }
+    return $vertices_ref;
 }
 
 
@@ -236,7 +258,7 @@ sub delete_vertex {
         croak "delete_vertex needs a loaded vertex id\n";
     }
     elsif ( $id == 0 ) {
-        croak "vertex id cannot be 0\n";
+        croak "vertex id cannot be zero\n";
     }
 
     # corrects behavior of plg files,
@@ -244,7 +266,7 @@ sub delete_vertex {
     $id-- if $id > 0;
 
     if ( not defined $self->{'vertices'}->[$id] ) {
-        return 0;
+        croak "delete_vertex needs a loaded vertex id\n";
     }
     else {
         splice @{ $self->{'vertices'} }, $id, 1;
@@ -269,7 +291,7 @@ sub get_polygon {
     $id-- if $id > 0;
 
     if ( not defined $self->{'polygons'}->[$id] ) {
-        return undef;
+        croak "get_polygon needs a loaded polygon id\n";
     }
     else {
         return @{ $self->{'polygons'}->[$id] };
@@ -289,7 +311,7 @@ sub get_polygon {
 sub render {
     my $self = shift;
 
-    eval { use OpenGL qw(:all) };
+    eval 'use OpenGL; 1';
     if ($@) {
         croak "Can't load Perl OpenGL: $@\n";
     }
@@ -298,15 +320,14 @@ sub render {
 
         # each polygon is represented
         # independently
-        glBegin(GL_POLYGON);
+        &OpenGL::glBegin(&OpenGL::GL_POLYGON);
 
         foreach my $vertex_id ( @{$plg_ref} ) {
             my @v = $self->get_vertex($vertex_id);
-            #print "@v ($vertex_id)\n";
-            glVertex3f(@v);
+            &OpenGL::glVertex3f(@v);
         }
 
-        glEnd;
+        &OpenGL::glEnd;
     }
 }
 
@@ -439,10 +460,22 @@ Version 0.01
     # the size of the polygon, i.e., the size of 
     # the array.
     $plg->set_polygon(3, 1,2,3);
-    
+
+    # after vertices and polygons are created, you
+    # can fetch them like this:
+    my @v_ids       = $plg->get_polygon( 1 );
+    my @coordinates = $plg->get_vertex( $v_ids[0] );
+
+    # you can even get all vertices from a given polygon
+    # in an array ref:
+    my $vertices = $plg->get_vertices_from_polygon( 2 );
+   
+    # you can see the OpenGL code necessary to render
+    # the model inside:
     print $plg->dump_code();
-    # outputs (in this case):
-    # -----------------------
+
+    # The above command outputs (in this case):
+    # -----------------------------------------
     #
     # glBegin(GL_POLYGON);
     #   glVertex3f(0.0, 1.0, 0.0);
@@ -473,7 +506,7 @@ You can also parse standard PLG files and even render your code in an OpenGL pro
     my $dino = OpenGL::PLG->new();
     $dino->parse_file('trex.plg');
    
-    my ($x, $y, $z) = (0.0, 0.0, 0.0);
+    my ($rx, $ry, $rz) = (0.0, 0.0, 0.0);
     glutInit;  
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);  
     glutCreateWindow("Sample PLG Renderer");  
@@ -496,9 +529,9 @@ You can also parse standard PLG files and even render your code in an OpenGL pro
         glClear(GL_COLOR_BUFFER_BIT);  
         glLoadIdentity;
         glTranslatef(0.0, 0.0, -5.0); 
-        glRotatef($z, 0, 0, 1);
-        glRotatef($x, 1, 0, 0);
-        glRotatef($y, 0, 1, 0);
+        glRotatef($rz, 0, 0, 1);
+        glRotatef($rx, 1, 0, 0);
+        glRotatef($ry, 0, 1, 0);
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     
         $dino->render();
@@ -510,13 +543,13 @@ You can also parse standard PLG files and even render your code in an OpenGL pro
     sub keyPressed {
         my ($key, $x, $y) = @_;
         if ($key == ord('z') ) {
-            $z = ($z + 2.0) % 360.0;
+            $rz = ($rz + 2.0) % 360.0;
         }
         elsif ( $key == ord('x') ) {
-            $x = ($x + 2.0) % 360.0;
+            $rx = ($rx + 2.0) % 360.0;
         }
         elsif ( $key == ord('y') ) {
-            $y = ($y + 2.0) % 360.0;
+            $ry = ($ry + 2.0) % 360.0;
         }
     }
 
@@ -556,20 +589,25 @@ Renders OpenGL code to display the object (i.e. the collection of polygons formi
 
 Dumps a string containing the OpenGL code to display the object (i.e. the collection of polygons forming I<whatever-it-is-they-form>). Use this to see the code that will be produced by render() should you use it inside an OpenGL display. You do B<*NOT*> need OpenGL to use this, as it will just output the code, not eval it.
 
-=head3 dump_code_to_file()
+=head3 dump_code_to_file( I<FILENAME> )
 
 This is the same as dump_code(), but will write the string to a given file instead of giving it back to the user. This is useful if you want to use the OpenGL code in another language (like C or C++).
 
-=head3 write_to_file()
+=head3 write_to_file( I<FILENAME> )
 
 This will write the object's vertices and polygons to a file, in raw PLG format. This is the exact reverse of parse_file().
+
 
 
 =head2 Vertex Manipulation
 
 =head3 get_vertex( I<ID> )
 
-Returns an array containing the wanted vertex (by its id).
+Returns an array containing the wanted vertex coordinates (by its id).
+
+=head3 get_vertices_from_polygon( I<ID> )
+
+Returns an array reference containing all vertex coordinates inside a given polygon, already resolved (instead of just the vertices' id number from get_polygon).
 
 =head3 set_vertex( I<X>, I<Y>, I<Z> [, I<ID>] )
 
@@ -586,6 +624,7 @@ Deletes a given vertex by its id number. The first included vertex has id "1", w
 =head3 total_vertices()
 
 Returns the total number of vertices in the object.
+
 
 
 =head2 Polygon Manipulation
@@ -607,18 +646,23 @@ Deletes a given polygon by its id number. The first included polygon has id "1",
 Returns the total number of polygons in the object.
 
 
+
 =head1 CONFIGURATION AND ENVIRONMENT
 
 OpenGL::PLG requires no configuration files or environment variables.
+
 
 
 =head1 DEPENDENCIES
 
 None. But the render() method will only work if you have the Perl OpenGL module installed.
 
+
+
 =head1 INCOMPATIBILITIES
 
 None reported.
+
 
 
 =head1 BUGS AND LIMITATIONS
@@ -628,6 +672,7 @@ There are a few other raw PLG formats available out-there. I'll try to adjust Op
 Please report any bugs or feature requests to C<bug-opengl-plg at rt.cpan.org>, or through
 the web interface at L<http://rt.cpan.org/NoAuth/ReportBug.html?Queue=OpenGL-PLG>.  I will be notified, and then you'll
 automatically be notified of progress on your bug as I make changes.
+
 
 
 =head1 SUPPORT
@@ -660,14 +705,17 @@ L<http://search.cpan.org/dist/OpenGL-PLG>
 =back
 
 
+
 =head1 AUTHOR
 
 Breno G. de Oliveira, C<< <garu at cpan.org> >>
 
 
+
 =head1 ACKNOWLEDGEMENTS
 
 A big thank you for grafman's OpenGL Perl module (and original author Stan Melax), which is a lot of fun to play with. Kudos also to everyone who helped the Perl OpenGL project along the way (and the OpenGL community itself).
+
 
 
 =head1 COPYRIGHT & LICENSE
