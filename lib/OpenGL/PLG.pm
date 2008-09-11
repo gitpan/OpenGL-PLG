@@ -4,7 +4,7 @@ use Carp;
 use warnings;
 use strict;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 
 # creates a new PoLyGon object
@@ -425,7 +425,7 @@ OpenGL::PLG - Create, manipulate and render PoLyGon objects and files
 
 =head1 VERSION
 
-Version 0.01
+Version 0.03
 
 
 =head1 SYNOPSIS

@@ -4,7 +4,7 @@ This is the README file for the OpenGL::PLG module. This concerns only the insta
 
 OpenGL::PLG is a class for OpenGL polygon objects. It lets you easily create and manipulate 3d polygon models. It also reads and writes files in raw PLG format, dumps OpenGL code and renders the 3d model (if you have Perl OpenGL installed).
 
-This is version 0.02 of the module (see the "Changes" file for a changelog). Stay tuned for new features and enhancements!
+See the "Changes" file for a complete version changelog. Stay tuned for new features and enhancements!
 
 
 INSTALLATION
